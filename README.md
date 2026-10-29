@@ -14,7 +14,7 @@ $video-edit "D:\VIDEO\path\to\video.mp4"
 $video-edit "D:\VIDEO\path\to\video.mp4" "D:\VIDEO\path\to\enhanced-audio.mp3"
 ```
 
-`$video-edit` هو استدعاء الـSkill في Codex. بعد استدعائه، الـAI هو الذي يراجع الصوت والصورة ويقرر القصّات؛ سكربت FFmpeg لا يخمّن التكرار الكلامي وحده. لو ستستخدم الأدوات يدويًا، أوامر `prepare` و`render` مشروحة أدناه.
+`$video-edit <video-path>` هو الأمر الواحد في Codex. بعد استدعائه، يراجع الـAI الصوت والصورة ويقرر القصّات؛ سكربت FFmpeg لا يخمّن التكرار الكلامي وحده. لو كان المصدر سيشن وركشوب حيّة مطلوبة كدرس كورس، يشمل الـworkflow إزالة افتتاحية الاجتماع ونداءات الحضور وفتح الأسئلة في النهاية، وتنظيف شاشة التسجيل، وإضافة عنوان الدرس وفواصل عند الانتقالات المهمة. لو ستستخدم الأدوات يدويًا، أوامر `prepare` و`render` مشروحة أدناه.
 
 ## التثبيت
 
@@ -27,6 +27,8 @@ $video-edit "D:\VIDEO\path\to\video.mp4" "D:\VIDEO\path\to\enhanced-audio.mp3"
 ```
 
 أو ضع المجلد داخل `$CODEX_HOME\skills\video-edit` إذا كنت تستخدم `CODEX_HOME` مخصصًا. بعد التثبيت، استخدم `$video-edit` ومرّر مسار المصدر. هذه النسخة مثبتة بالفعل في حساب Codex الذي أُنشئ فيه الريبو.
+
+يتطلب أمر `title-card` حزم Python الاختيارية `Pillow` و`arabic-reshaper` و`python-bidi` لكتابة العنوان العربي بشكل صحيح. أوامر `prepare` و`render` تحتاج FFmpeg وffprobe؛ وحرق عناوين SRT يحتاج دعم libass في FFmpeg.
 
 ## ما الذي يفعله الـAI
 
@@ -62,7 +64,18 @@ python .\scripts\video_edit.py prepare "D:\path\to\video.mp4"
 python .\scripts\video_edit.py render "D:\path\to\video_edit\video_edit_plan.json"
 python .\scripts\video_edit.py render "D:\path\to\video_edit\video_edit_plan.json" --enhanced-audio "D:\path\to\enhanced-audio.mp3"
 python .\scripts\video_edit.py render "D:\path\to\video_edit\video_edit_plan.json" --no-intro
+python .\scripts\video_edit.py render "D:\path\to\video_edit\video_edit_plan.json" --intro-video "D:\path\to\course_title.mp4" --chapters-srt "D:\path\to\chapters.srt" --output "D:\path\to\video_edit\course\course_final.mp4"
+python .\scripts\video_edit.py title-card --output "D:\path\to\course_title.mp4" --title "درس السيو التقني عمليًا" --subtitle "الأداء وأدوات جوجل" --duration 6.3 --audio-from "D:\path\to\source.mp4" --audio-start 0
 ```
+
+### تحويل تسجيل الورشة إلى درس كورس
+
+- راجع بداية التسجيل ونهايته وكل موضع يظهر فيه Meet أو حضور أو سؤال من مشارك. لا تحذف سؤالًا وإجابته إذا كانت الإجابة جزءًا من الدرس؛ احذف النداء والاسم فقط عندما لا يضيفان تعليمًا.
+- استبدل شريحة/تبويب ورشة قديمة بعنوان درس دقيق. يجب أن يحتوي فيديو المقدمة المخصص على نفس جزء صوت البداية الذي سيُحذف من المصدر كي لا يحصل عدم تطابق بين الصوت والصورة.
+- ضع عناوين الفصول أو تنبيهات الانتظار في ملف SRT UTF-8، واستخدم `--chapters-srt` لحرقها على الصورة. تكون توقيتات SRT بعد القصّ وعلى خط جسم الفيديو، من دون مدة المقدمة.
+- لا تقصّ صمت تحميل أداة إذا كان عرض النتيجة مهمًا؛ سرّعه أو أضف عبارة قصيرة. قصّ فقط صمت الانتظار الذي لا يحمل خطوة تعليمية.
+- صدّر نسخة الكورس في مجلد منفصل باستخدام `--output`، مثل `<stem>_edit/course/<stem>_course_final.mp4`، واترك المصدر ونسخة التنظيف الأولى كما هما.
+- استخدم `mask_regions` في خطة التحرير لإخفاء/تمويه مستطيلات محددة من تسجيل الشاشة بوحدات بكسل المصدر، مثل شريط التبويبات أو شريط المهام. راجع كل تخطيط شاشة أولًا حتى لا تغطي عنوان URL أو كودًا يحتاجه الشرح.
 
 بعد `prepare`، يراجع المحرر الصورة والصوت ويضيف القصّات إلى مصفوفة `cuts` في JSON. كل عنصر يستخدم أوقات المصدر:
 
