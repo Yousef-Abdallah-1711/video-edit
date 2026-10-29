@@ -7,12 +7,17 @@ import argparse
 import math
 import json
 import re
-import shutil
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
+
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
@@ -239,7 +244,9 @@ def render(args: argparse.Namespace) -> None:
     source = Path(plan["source"]).expanduser().resolve()
     source_info = probe(source)
     source_duration = media_duration(source_info)
-    if not any(stream.get("codec_type") == "audio" for stream in source_info.get("streams", [])):
+    has_source_audio = any(stream.get("codec_type") == "audio" for stream in source_info.get("streams", []))
+    enhanced = Path(args.enhanced_audio).expanduser().resolve() if args.enhanced_audio else None
+    if not has_source_audio and not enhanced:
         raise RuntimeError("The source has no audio stream to edit. Add a source audio track before rendering.")
     cuts = merged_cuts(plan, source_duration)
     kept = kept_ranges(source_duration, cuts)
@@ -248,7 +255,6 @@ def render(args: argparse.Namespace) -> None:
     intro = INTRO_ASSET if use_intro else None
     intro_duration = media_duration(probe(intro)) if intro else 0.0
     expected_duration = intro_duration + body_duration
-    enhanced = Path(args.enhanced_audio).expanduser().resolve() if args.enhanced_audio else None
     if enhanced:
         audio_duration = media_duration(probe(enhanced))
         if abs(audio_duration - expected_duration) > args.audio_tolerance:
@@ -269,11 +275,15 @@ def render(args: argparse.Namespace) -> None:
     graph: list[str] = []
     for index, (start, end) in enumerate(kept):
         graph.append(f"[{source_index}:v]trim=start={start:.6f}:end={end:.6f},setpts=PTS-STARTPTS[v{index}]" )
-        graph.append(f"[{source_index}:a]atrim=start={start:.6f}:end={end:.6f},asetpts=PTS-STARTPTS[a{index}]")
         graph.append(video_shape_filter(plan.get("crop"), f"v{index}", f"vkeep{index}"))
-    video_inputs = "".join(f"[vkeep{i}]" for i in range(len(kept)))
-    audio_inputs = "".join(f"[a{i}]" for i in range(len(kept)))
-    graph.append(f"{video_inputs}{audio_inputs}concat=n={len(kept)}:v=1:a=1[bodyv][bodya]")
+        if not enhanced and has_source_audio:
+            graph.append(f"[{source_index}:a]atrim=start={start:.6f}:end={end:.6f},asetpts=PTS-STARTPTS[a{index}]")
+    if enhanced or not has_source_audio:
+        video_inputs = "".join(f"[vkeep{i}]" for i in range(len(kept)))
+        graph.append(f"{video_inputs}concat=n={len(kept)}:v=1:a=0[bodyv]")
+    else:
+        concat_inputs = "".join(f"[vkeep{i}][a{i}]" for i in range(len(kept)))
+        graph.append(f"{concat_inputs}concat=n={len(kept)}:v=1:a=1[bodyv][bodya]")
 
     freeze_inputs: list[tuple[int, float, float]] = []
     for index, freeze in enumerate(plan.get("freezes", [])):
@@ -312,7 +322,7 @@ def render(args: argparse.Namespace) -> None:
         audio_map = "[afinal]"
     filter_path.write_text(";\n".join(graph), encoding="utf-8")
     command += ["-filter_complex_script", str(filter_path), "-map", "[vfinal]", "-map", audio_map]
-    command += ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-r", "30", "-c:a", "aac", "-b:a", "256k" if enhanced else "192k", "-ar", "48000", "-ac", "2", "-movflags", "+faststart", str(output)]
+    command += ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-r", "30", "-c:a", "aac", "-b:a", "256k" if enhanced else "192k", "-ar", "48000", "-ac", "2", "-movflags", "+faststart", "-shortest", str(output)]
     print(f"Source {source_duration:.2f}s; removed {len(cuts)} merged spans; body {body_duration:.2f}s; intro {intro_duration:.2f}s; rendering {output}", flush=True)
     run(command)
     audio_export = workdir / f"{source.stem}_final_audio.mp3"
