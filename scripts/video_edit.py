@@ -103,7 +103,7 @@ def create_title_card(args: argparse.Namespace) -> None:
     title_font = ImageFont.truetype(font_path, 88)
     subtitle_font = ImageFont.truetype(font_path, 48)
     kicker_font = ImageFont.truetype(font_path, 34)
-    kicker = shaped("درس تطبيقي | SEO")
+    kicker = shaped("درس تطبيقي")
     title = shaped(args.title)
     subtitle = shaped(args.subtitle) if args.subtitle else ""
     draw.text((1280, 580), kicker, font=kicker_font, fill="#70D9D0", anchor="mm")
@@ -336,10 +336,19 @@ def render(args: argparse.Namespace) -> None:
             source_height = int(next(stream for stream in source_info["streams"] if stream.get("codec_type") == "video").get("height", 0))
             if min(x, y) < 0 or min(width, height) <= 0 or x + width > source_width or y + height > source_height:
                 raise RuntimeError(f"Invalid mask region: {mask}")
+            mask_start = float(mask.get("start", 0.0))
+            mask_end = float(mask.get("end", source_duration))
+            if mask_start < 0 or mask_end <= mask_start or mask_end > source_duration + 0.05:
+                raise RuntimeError(f"Invalid mask time range: {mask}")
+            overlap_start = max(start, mask_start)
+            overlap_end = min(end, mask_end)
+            if overlap_end <= overlap_start:
+                continue
+            local_start, local_end = overlap_start - start, overlap_end - start
             base_label, mask_source, blurred_label, masked_label = (f"v{index}_{mask_index}_{suffix}" for suffix in ("base", "src", "blur", "masked"))
             graph.append(f"[{current_video}]split[{base_label}][{mask_source}]")
-            graph.append(f"[{mask_source}]crop={width}:{height}:{x}:{y},boxblur=6:2[{blurred_label}]")
-            graph.append(f"[{base_label}][{blurred_label}]overlay={x}:{y}:shortest=1[{masked_label}]")
+            graph.append(f"[{mask_source}]crop={width}:{height}:{x}:{y},boxblur=18:4:11:4[{blurred_label}]")
+            graph.append(f"[{base_label}][{blurred_label}]overlay={x}:{y}:shortest=1:enable='between(t,{local_start:.6f},{local_end:.6f})'[{masked_label}]")
             current_video = masked_label
         graph.append(video_shape_filter(plan.get("crop"), current_video, f"vkeep{index}"))
         if not enhanced and has_source_audio:

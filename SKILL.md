@@ -30,6 +30,6 @@ python <skill>/scripts/video_edit.py render "D:\path\to\source_edit\source_edit_
 python <skill>/scripts/video_edit.py title-card --output "D:\path\to\course_title.mp4" --title "درس السيو التقني عمليًا" --subtitle "الأداء وأدوات جوجل" --duration 6.3 --audio-from "D:\path\to\source.mp4" --audio-start 0
 ```
 
-Use `mask_regions` in the plan for a privacy/desktop mask in source-frame pixels, for example `[{"x":0,"y":0,"width":2580,"height":86}]`. The renderer blurs only those rectangles in the source picture before fitting it to 16:9. Check every screen layout first; do not cover a URL, control, or code that the lesson needs.
+Use `mask_regions` in the plan for privacy/desktop masks in source-frame pixels, for example `[{"x":0,"y":0,"width":2580,"height":86,"start":0,"end":175}]`. `start`/`end` are optional source timestamps in seconds; omit them to blur that rectangle for the whole source. This supports removing a meeting popup only while it is on screen, without obscuring later lesson content. The renderer applies a strong blur before fitting the frame to 16:9. Check every screen layout and mask interval; do not cover a URL, control, or code needed for the lesson.
 
 The original source remains untouched. Review artifacts and the edit plan stay under `<stem>_edit`; a course render and its separate MP3, project, chapter SRT, title card, filter graph, and summary belong under `<stem>_edit/course/`. Use the bundled intro only for the payment-gateway series; all other lessons need a title card that matches their subject.
