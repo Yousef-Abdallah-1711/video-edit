@@ -93,7 +93,6 @@ def create_title_card(args: argparse.Namespace) -> None:
     draw = ImageDraw.Draw(image)
     draw.ellipse((1930, -420, 2860, 510), fill="#142D3C")
     draw.ellipse((-400, 1050, 400, 1850), fill="#142D3C")
-    draw.rounded_rectangle((220, 355, 2340, 1090), radius=36, fill="#121F2B", outline="#263B4A", width=3)
     draw.rounded_rectangle((1160, 472, 1400, 484), radius=6, fill="#23C6B7")
     font_path = args.font or r"C:\Windows\Fonts\arial.ttf"
     if not Path(font_path).is_file():
