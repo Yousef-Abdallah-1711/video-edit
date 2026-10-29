@@ -178,7 +178,7 @@ def video_shape_filter(crop: dict[str, int] | None, input_label: str, output_lab
             raise RuntimeError(f"Invalid crop configuration: {crop}")
         base = f"crop={width}:{height}:{x}:{y},scale=2560:1440:flags=lanczos"
     else:
-        base = "scale=2560:1440:force_original_aspect_ratio=increase:flags=lanczos,crop=2560:1440"
+        base = "scale=2560:1440:force_original_aspect_ratio=decrease:flags=lanczos,pad=2560:1440:(ow-iw)/2:(oh-ih)/2:color=black"
     return f"[{input_label}]{base},fps=30,setsar=1[{output_label}]"
 
 
