@@ -1,0 +1,4 @@
+interface:
+  display_name: "Video Edit"
+  short_description: "Edit videos from a single source path"
+  default_prompt: "Use $video-edit to fully review and edit this video: [path]"
