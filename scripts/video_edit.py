@@ -375,7 +375,7 @@ def render(args: argparse.Namespace) -> None:
         if not chapters_srt.is_file():
             raise RuntimeError(f"Chapter subtitles file does not exist: {chapters_srt}")
         escaped_subtitles = str(chapters_srt).replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
-        style = "FontName=Arial,Fontsize=38,PrimaryColour=&H00FFFFFF,OutlineColour=&H00131B27,BorderStyle=3,BackColour=&HCC131B27,Outline=1,Shadow=0,Alignment=2,MarginV=74"
+        style = "FontName=Arial,FontSize=12,PrimaryColour=&H00FFFFFF,OutlineColour=&H00131B27,BorderStyle=3,BackColour=&HCC131B27,Outline=1,Shadow=0,Alignment=2,MarginV=74"
         graph.append(f"[{body_label}]subtitles=filename='{escaped_subtitles}':force_style='{style}'[bodytitled]")
         body_label = "bodytitled"
 
